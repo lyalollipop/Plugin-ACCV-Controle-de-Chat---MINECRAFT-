@@ -1,0 +1,37 @@
+Codigo feito em Bukkit
+
+Para esse plugin funcionar, você precisará da biblioteca bukkit-0.0.1-SNAPSHOT.jar (específica da Beta 1.7.3) no seu ambiente de desenvolvimento.
+Adicione na pasta bukkit-0.0.1-SNAPSHOT.jar usando VS Code
+
+
+Configurando o Plugin
+
+
+Para o Bukkit reconhecer o plugin, você deve criar um arquivo chamado plugin.yml na raiz do projeto:
+
+
+
+name: AgeChat
+main: com.meuplugin.chatage.AgeChat
+version: 1.0
+commands:
+  addtext:
+    description: Adiciona idade a um jogador e libera o chat.
+    usage: /addtext <player> <idade>
+  helpmodgeral:
+    description: Permite ao moderador ler todas as faixas etarias.
+    usage: /helpmodgeral <player>
+
+
+
+Explicação das Funcionalidades:
+Bloqueio Total: Se o jogador não for adicionado via /addtext, ele não consegue enviar mensagens e as mensagens dos outros não aparecem para ele.
+
+Separação por Faixa: O código usa a lógica isInSameBracket para garantir que alguém de 10 anos não leia o que alguém de 18 anos escreve, e vice-versa.
+
+Visão de Moderador: O comando /helpmodgeral ativa um "modo espião". O moderador verá todas as mensagens de todas as salas com a tag de identificação (ex: [16+] <Nick> Mensagem).
+
+Mensagens de Sistema: Como o plugin cancela apenas o PlayerChatEvent, mensagens automáticas do servidor ou de outros plugins que usem sendMessage diretamente continuarão funcionando.
+
+
+Como essa versão é muito antiga, os dados serão perdidos se o servidor reiniciar. Se precisar que eles fiquem salvos, seria necessário implementar um salvamento em .txt ou .yml.
