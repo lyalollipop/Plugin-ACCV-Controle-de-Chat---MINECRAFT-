@@ -1,0 +1,129 @@
+package com.meuplugin.agechat;
+
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.HashSet;
+import java.util.Set;
+
+public class AgeChat extends JavaPlugin implements Listener {
+
+    private final Set<String> moderators = new HashSet<>();
+
+    @Override
+    public void onEnable() {
+        saveDefaultConfig();
+        getServer().getPluginManager().registerEvents(this, silver);
+        getLogger().info("AgeChat 1.7.10 ativado com sucesso!");
+    }
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        
+        // Comando /addtext <nick> <idade>
+        if (cmd.getName().equalsIgnoreCase("addtext")) {
+            if (!sender.hasPermission("agechat.admin")) {
+                sender.sendMessage(ChatColor.RED + "Sem permissao.");
+                return true;
+            }
+            if (args.length < 2) {
+                sender.sendMessage(ChatColor.RED + "Uso: /addtext <nick> <idade>");
+                return true;
+            }
+
+            String targetName = args[0];
+            int age;
+            try {
+                age = Integer.parseInt(args[1]);
+            } catch (NumberFormatException e) {
+                sender.sendMessage(ChatColor.RED + "A idade deve ser um numero.");
+                return true;
+            }
+
+            getConfig().set("players." + targetName.toLowerCase(), age);
+            saveConfig();
+            sender.sendMessage(ChatColor.GREEN + targetName + " registrado com " + age + " anos.");
+            return true;
+        }
+
+        // Comando /helpmodgeral <nick>
+        if (cmd.getName().equalsIgnoreCase("helpmodgeral")) {
+            if (!sender.hasPermission("agechat.admin")) return true;
+            if (args.length < 1) return false;
+
+            String target = args[0].toLowerCase();
+            if (moderators.contains(target)) {
+                moderators.remove(target);
+                sender.sendMessage(ChatColor.YELLOW + "Modo espião desativado para " + target);
+            } else {
+                moderators.add(target);
+                sender.sendMessage(ChatColor.AQUA + "Modo espião ATIVADO para " + target);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onChat(AsyncPlayerChatEvent event) {
+        Player sender = event.getPlayer();
+        String senderName = sender.getName().toLowerCase();
+
+        // Se não tem idade no config, bloqueia tudo
+        if (!getConfig().contains("players." + senderName)) {
+            event.setCancelled(true);
+            sender.sendMessage(ChatColor.RED + "Seu chat esta bloqueado. Aguarde validacao de idade.");
+            return;
+        }
+
+        int senderAge = getConfig().getInt("players." + senderName);
+        event.getRecipients().clear(); // Limpa quem receberia a mensagem originalmente
+
+        String prefix = getBracketPrefix(senderAge);
+        String format = ChatColor.WHITE + "<" + sender.getDisplayName() + "> " + event.getMessage();
+
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            String onlineName = online.getName().toLowerCase();
+
+            // 1. Moderadores com comando ativo veem tudo com o Prefixo
+            if (moderators.contains(onlineName)) {
+                online.sendMessage(prefix + " " + format);
+                continue;
+            }
+
+            // 2. Jogadores normais só veem se estiverem na mesma faixa
+            if (getConfig().contains("players." + onlineName)) {
+                int recipientAge = getConfig().getInt("players." + onlineName);
+                if (isSameBracket(senderAge, recipientAge)) {
+                    online.sendMessage(format);
+                }
+            }
+        }
+        
+        // Cancela o evento final para o Bukkit não tentar enviar a mensagem de novo
+        event.setCancelled(true);
+    }
+
+    private String getBracketPrefix(int age) {
+        if (age >= 18) return ChatColor.DARK_RED + "[18+]";
+        if (age >= 16) return ChatColor.GOLD + "[16+]";
+        if (age >= 13) return ChatColor.YELLOW + "[13+]";
+        return ChatColor.GREEN + "[10+]";
+    }
+
+    private boolean isSameBracket(int age1, int age2) {
+        if (age1 >= 18 && age2 >= 18) return true;
+        if (age1 >= 16 && age1 < 18 && age2 >= 16 && age2 < 18) return true;
+        if (age1 >= 13 && age1 < 16 && age2 >= 13 && age2 < 16) return true;
+        if (age1 >= 10 && age1 < 13 && age2 >= 10 && age2 < 13) return true;
+        return false;
+    }
+}
