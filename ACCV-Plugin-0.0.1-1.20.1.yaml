@@ -1,0 +1,11 @@
+name: AgeChat
+version: 1.5
+main: com.meuplugin.agechat.AgeChat
+api-version: '1.20'
+commands:
+  addtext:
+    description: Define idade e libera chat.
+    permission: agechat.admin
+  helpmodgeral:
+    description: Alterna modo espião para staff.
+    permission: agechat.admin
