@@ -1,0 +1,11 @@
+name: AgeChat
+version: 1.4
+main: com.meuplugin.agechat.AgeChat
+api-version: 1.18
+commands:
+  addtext:
+    description: Registra a idade e libera o chat.
+    permission: agechat.admin
+  helpmodgeral:
+    description: Permite ler todas as salas de chat.
+    permission: agechat.admin
