@@ -1,0 +1,139 @@
+package com.meuplugin.agechat;
+
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+
+public class AgeChat extends JavaPlugin implements Listener {
+
+    private final Set<UUID> moderators = new HashSet<>();
+
+    @Override
+    public void onEnable() {
+        saveDefaultConfig();
+        getServer().getPluginManager().registerEvents(this, this);
+        getLogger().info("AgeChat 1.12.2 inicializado!");
+    }
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        
+        if (cmd.getName().equalsIgnoreCase("addtext")) {
+            if (!sender.hasPermission("agechat.admin")) {
+                sender.sendMessage(ChatColor.RED + "Você não tem permissão para isso.");
+                return true;
+            }
+
+            if (args.length < 2) {
+                sender.sendMessage(ChatColor.RED + "Uso correto: /addtext <player> <idade>");
+                return true;
+            }
+
+            Player target = Bukkit.getPlayer(args[0]);
+            if (target == null) {
+                sender.sendMessage(ChatColor.RED + "Jogador não encontrado.");
+                return true;
+            }
+
+            try {
+                int age = Integer.parseInt(args[1]);
+                // Salva no config.yml usando o UUID
+                getConfig().set("players." + target.getUniqueId().toString(), age);
+                saveConfig();
+
+                sender.sendMessage(ChatColor.GREEN + "Sucesso! " + target.getName() + " agora tem " + age + " anos.");
+                target.sendMessage(ChatColor.AQUA + "Seu chat foi liberado por um administrador.");
+            } catch (NumberFormatException e) {
+                sender.sendMessage(ChatColor.RED + "A idade precisa ser um número.");
+            }
+            return true;
+        }
+
+        if (cmd.getName().equalsIgnoreCase("helpmodgeral")) {
+            if (!sender.hasPermission("agechat.admin")) return true;
+            if (args.length < 1) return false;
+
+            Player target = Bukkit.getPlayer(args[0]);
+            if (target == null) return true;
+
+            UUID uuid = target.getUniqueId();
+            if (moderators.contains(uuid)) {
+                moderators.remove(uuid);
+                sender.sendMessage(ChatColor.YELLOW + "Modo espião desativado para " + target.getName());
+            } else {
+                moderators.add(uuid);
+                sender.sendMessage(ChatColor.AQUA + "Modo espião ativado para " + target.getName());
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onChat(AsyncPlayerChatEvent event) {
+        Player sender = event.getPlayer();
+        String uuidStr = sender.getUniqueId().toString();
+
+        // Verifica se o jogador está registrado
+        if (!getConfig().contains("players." + uuidStr)) {
+            event.setCancelled(true);
+            sender.sendMessage(ChatColor.RED + "Chat bloqueado! Você precisa de uma validação de idade.");
+            return;
+        }
+
+        int senderAge = getConfig().getInt("players." + uuidStr);
+        String prefix = getAgePrefix(senderAge);
+        String message = String.format(event.getFormat(), sender.getDisplayName(), event.getMessage());
+
+        // Limpa destinatários para fazer o filtro manual
+        event.getRecipients().clear();
+
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            UUID onlineUUID = online.getUniqueId();
+
+            // 1. Se for moderador no modo espião
+            if (moderators.contains(onlineUUID)) {
+                online.sendMessage(prefix + " " + message);
+                continue;
+            }
+
+            // 2. Jogadores comuns na mesma faixa etária
+            if (getConfig().contains("players." + onlineUUID.toString())) {
+                int recAge = getConfig().getInt("players." + onlineUUID.toString());
+                if (checkBracket(senderAge, recAge)) {
+                    online.sendMessage(message);
+                }
+            }
+        }
+        
+        // Cancela para o Bukkit não enviar a mensagem original
+        event.setCancelled(true);
+    }
+
+    private String getAgePrefix(int age) {
+        if (age >= 18) return ChatColor.DARK_RED + "[18+]";
+        if (age >= 16) return ChatColor.GOLD + "[16+]";
+        if (age >= 13) return ChatColor.YELLOW + "[13+]";
+        return ChatColor.GREEN + "[10+]";
+    }
+
+    private boolean checkBracket(int a1, int a2) {
+        if (a1 >= 18 && a2 >= 18) return true;
+        if (a1 >= 16 && a1 < 18 && a2 >= 16 && a2 < 18) return true;
+        if (a1 >= 13 && a1 < 16 && a2 >= 13 && a2 < 16) return true;
+        if (a1 >= 10 && a1 < 13 && a2 >= 10 && a2 < 13) return true;
+        return false;
+    }
+}
