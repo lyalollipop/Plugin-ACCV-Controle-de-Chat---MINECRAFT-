@@ -1,0 +1,11 @@
+name: AgeChat
+version: 1.6
+main: com.meuplugin.agechat.AgeChat
+api-version: '1.21'
+commands:
+  addtext:
+    description: Registra idade do jogador e libera o chat.
+    permission: agechat.admin
+  helpmodgeral:
+    description: Permite ver todas as faixas etárias de chat.
+    permission: agechat.admin
