@@ -1,0 +1,119 @@
+package com.meuplugin.chatage;
+
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
+import org.bukkit.event.player.PlayerChatEvent;
+import org.bukkit.event.player.PlayerListener;
+import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.HashMap;
+import java.util.UUID;
+
+public class AgeChat extends JavaPlugin {
+
+    // Armazena a idade do jogador
+    private final HashMap<String, Integer> playerAge = new HashMap<String, Integer>();
+    // Armazena quem tem permissão de moderador para ver tudo
+    private final HashMap<String, Boolean> modView = new HashMap<String, Boolean>();
+
+    @Override
+    public void onEnable() {
+        getServer().getPluginManager().registerEvent(Event.Type.PLAYER_CHAT, new ChatListener(), Event.Priority.Highest, this);
+        System.out.println("AgeChat Beta 1.7.3 ativado!");
+    }
+
+    @Override
+    public void onDisable() {
+        System.out.println("AgeChat desativado!");
+    }
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        // Comando /addtext <nick> <idade>
+        if (cmd.getName().equalsIgnoreCase("addtext")) {
+            if (!sender.isOp()) {
+                sender.sendMessage(ChatColor.RED + "Apenas OPs podem usar este comando.");
+                return true;
+            }
+            if (args.length < 2) return false;
+
+            String target = args[0];
+            int age = Integer.parseInt(args[1]);
+            playerAge.put(target.toLowerCase(), age);
+            sender.sendMessage(ChatColor.GREEN + target + " agora tem " + age + " anos e pode usar o chat.");
+            return true;
+        }
+
+        // Comando /helpmodgeral <nick>
+        if (cmd.getName().equalsIgnoreCase("helpmodgeral")) {
+            if (!sender.isOp()) return true;
+            if (args.length < 1) return false;
+
+            String target = args[0].toLowerCase();
+            modView.put(target, true);
+            sender.sendMessage(ChatColor.AQUA + "Acesso de moderador concedido a " + target);
+            return true;
+        }
+
+        return false;
+    }
+
+    private class ChatListener extends PlayerListener {
+        @Override
+        public void onPlayerChat(PlayerChatEvent event) {
+            Player sender = event.getPlayer();
+            String senderName = sender.getName().toLowerCase();
+
+            // Cancela o evento original para que o chat padrão não apareça
+            event.setCancelled(true);
+
+            // Verifica se o jogador tem idade registrada
+            if (!playerAge.containsKey(senderName)) {
+                sender.sendMessage(ChatColor.RED + "Voce nao tem permissao para falar ou ler o chat. Aguarde um ADM.");
+                return;
+            }
+
+            int age = playerAge.get(senderName);
+            String prefix = getAgePrefix(age);
+            String message = ChatColor.WHITE + "<" + sender.getDisplayName() + "> " + event.getMessage();
+
+            // Envia a mensagem apenas para quem cumpre os requisitos
+            for (Player recipient : Bukkit.getOnlinePlayers()) {
+                String recName = recipient.getName().toLowerCase();
+
+                // 1. Se for o moderador com /helpmodgeral, vê tudo com o prefixo
+                if (modView.containsKey(recName)) {
+                    recipient.sendMessage(prefix + " " + message);
+                    continue;
+                }
+
+                // 2. Se o destinatário tiver idade, verifica a faixa etária
+                if (playerAge.containsKey(recName)) {
+                    int recAge = playerAge.get(recName);
+                    if (isInSameBracket(age, recAge)) {
+                        recipient.sendMessage(message);
+                    }
+                }
+            }
+        }
+
+        private String getAgePrefix(int age) {
+            if (age >= 18) return ChatColor.DARK_RED + "[18+]";
+            if (age >= 16) return ChatColor.GOLD + "[16+]";
+            if (age >= 13) return ChatColor.YELLOW + "[13+]";
+            return ChatColor.GREEN + "[10+]";
+        }
+
+        private boolean isInSameBracket(int age1, int age2) {
+            if (age1 >= 18 && age2 >= 18) return true;
+            if ((age1 >= 16 && age1 < 18) && (age2 >= 16 && age2 < 18)) return true;
+            if ((age1 >= 13 && age1 < 16) && (age2 >= 13 && age2 < 16)) return true;
+            if ((age1 >= 10 && age1 < 13) && (age2 >= 10 && age2 < 13)) return true;
+            return false;
+        }
+    }
+}
