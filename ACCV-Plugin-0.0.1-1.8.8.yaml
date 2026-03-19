@@ -1,0 +1,11 @@
+name: AgeChat
+main: com.meuplugin.agechat.AgeChat
+version: 1.2
+api-version: 1.8
+commands:
+  addtext:
+    description: Adiciona um jogador à lista de chat permitido com idade.
+    permission: agechat.admin
+  helpmodgeral:
+    description: Alterna o modo de visão global para moderadores.
+    permission: agechat.admin
