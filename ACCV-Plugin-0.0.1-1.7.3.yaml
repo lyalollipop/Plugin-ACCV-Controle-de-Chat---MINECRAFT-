@@ -1,0 +1,10 @@
+name: AgeChat
+main: com.meuplugin.chatage.AgeChat
+version: 1
+commands:
+  addtext:
+    description: Adiciona idade a um jogador e libera o chat.
+    usage: /addtext <player> <idade>
+  helpmodgeral:
+    description: Permite ao moderador ler todas as faixas etarias.
+    usage: /helpmodgeral <player>
